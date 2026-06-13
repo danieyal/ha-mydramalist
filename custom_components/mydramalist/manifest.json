@@ -1,0 +1,11 @@
+{
+  "domain": "mydramalist",
+  "name": "MyDramaList",
+  "codeowners": ["@tbdsux"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/tbdsux/ha-mydramalist",
+  "iot_class": "cloud_polling",
+  "requirements": ["kuryana>=0.2.0"],
+  "version": "0.1.0"
+}

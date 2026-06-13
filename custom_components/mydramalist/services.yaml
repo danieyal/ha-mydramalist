@@ -1,0 +1,30 @@
+refresh:
+  name: Refresh
+  description: Force-refresh MyDramaList data from the API.
+  target:
+    entity:
+      integration: mydramalist
+
+search:
+  name: Search
+  description: Search for dramas or people on MyDramaList.
+  fields:
+    query:
+      name: Query
+      description: Search query string.
+      required: true
+      example: "goblin"
+      selector:
+        text:
+
+get_drama:
+  name: Get Drama
+  description: Get detailed information about a specific drama.
+  fields:
+    slug:
+      name: Slug
+      description: The drama slug from MyDramaList.
+      required: true
+      example: "good-bad-mother"
+      selector:
+        text:

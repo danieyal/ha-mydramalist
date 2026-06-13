@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "MyDramaList",
+        "description": "Enter your MyDramaList user ID and optional API endpoint.",
+        "data": {
+          "user_id": "User ID",
+          "api_url": "API URL (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the API. Check your user ID and API URL."
+    },
+    "abort": {
+      "already_configured": "This MyDramaList user is already configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "watching": {
+        "name": "Watching"
+      },
+      "completed": {
+        "name": "Completed"
+      },
+      "plan_to_watch": {
+        "name": "Plan to Watch"
+      },
+      "on_hold": {
+        "name": "On Hold"
+      },
+      "dropped": {
+        "name": "Dropped"
+      },
+      "total": {
+        "name": "Total dramas"
+      }
+    }
+  }
+}
