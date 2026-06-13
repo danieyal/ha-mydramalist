@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
@@ -13,8 +12,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CATEGORIES, DOMAIN, NAME
 from .coordinator import MyDramaListCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -53,14 +50,11 @@ class MyDramaListCategorySensor(CoordinatorEntity[MyDramaListCoordinator], Senso
             name=NAME,
             entry_type=DeviceEntryType.SERVICE,
         )
+        self._sync_state()
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
+    def _sync_state(self) -> None:
         data = self.coordinator.data
         if data is None:
-            _LOGGER.debug("%s coordinator data is None, marking unavailable", self._category)
-            self._attr_available = False
-            self.async_write_ha_state()
             return
 
         category_data = data.get(self._category, {})
@@ -70,6 +64,15 @@ class MyDramaListCategorySensor(CoordinatorEntity[MyDramaListCoordinator], Senso
             "items": category_data.get("items", []),
             "stats": category_data.get("stats", {}),
         }
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        if self.coordinator.data is None:
+            self._attr_available = False
+            self.async_write_ha_state()
+            return
+
+        self._sync_state()
         self.async_write_ha_state()
 
 
@@ -89,13 +92,11 @@ class MyDramaListTotalSensor(CoordinatorEntity[MyDramaListCoordinator], SensorEn
             name=NAME,
             entry_type=DeviceEntryType.SERVICE,
         )
+        self._sync_state()
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
+    def _sync_state(self) -> None:
         data = self.coordinator.data
         if data is None:
-            self._attr_available = False
-            self.async_write_ha_state()
             return
 
         self._attr_available = True
@@ -111,4 +112,13 @@ class MyDramaListTotalSensor(CoordinatorEntity[MyDramaListCoordinator], SensorEn
             }
 
         self._attr_extra_state_attributes = attributes
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        if self.coordinator.data is None:
+            self._attr_available = False
+            self.async_write_ha_state()
+            return
+
+        self._sync_state()
         self.async_write_ha_state()

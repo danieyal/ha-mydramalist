@@ -22,10 +22,14 @@ _LOGGER = logging.getLogger(__name__)
 _MODEL_KEY_MAP = {
     "Completed": CATEGORY_COMPLETED,
     "Plan_to_Watch": CATEGORY_PLAN_TO_WATCH,
+    "Plan to Watch": CATEGORY_PLAN_TO_WATCH,
     "On_hold": CATEGORY_ON_HOLD,
+    "On-hold": CATEGORY_ON_HOLD,
+    "On Hold": CATEGORY_ON_HOLD,
     "Dropped": CATEGORY_DROPPED,
     "Watching": CATEGORY_WATCHING,
     "Currently Watching": CATEGORY_WATCHING,
+    "Currently-Watching": CATEGORY_WATCHING,
 }
 
 
