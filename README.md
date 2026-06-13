@@ -24,7 +24,7 @@ Tracks your drama watching progress — completed, plan-to-watch, on-hold, dropp
 
 ```sh
 cd <ha-config>/custom_components
-git clone https://github.com/tbdsux/ha-mydramalist.git mydramalist
+git clone https://github.com/danieyal/ha-mydramalist.git mydramalist
 ```
 
 Then restart Home Assistant.
