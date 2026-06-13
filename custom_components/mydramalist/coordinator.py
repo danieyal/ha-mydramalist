@@ -65,22 +65,21 @@ def _normalize_data(user_query: UserQuery) -> dict[str, Any]:
     total_count = 0
 
     if isinstance(raw_list, UserDataList):
-        entries = {
+        entries: dict[str, UserDataListGroup] = {
             CATEGORY_COMPLETED: raw_list.Completed,
             CATEGORY_PLAN_TO_WATCH: raw_list.Plan_to_Watch,
             CATEGORY_ON_HOLD: raw_list.On_hold,
             CATEGORY_DROPPED: raw_list.Dropped,
         }
+        if (watching := getattr(raw_list, "Watching", None)) is not None:
+            entries[CATEGORY_WATCHING] = watching
         for category, group in entries.items():
             normalized[category] = _normalize_group(group)
             total_count += len(group.items)
     else:
         for key, group in raw_list.items():
             category = _MODEL_KEY_MAP.get(key, key.lower().replace(" ", "_"))
-            if category not in normalized:
-                normalized[category] = _normalize_group(group)
-            else:
-                normalized[category] = _normalize_group(group)
+            normalized[category] = _normalize_group(group)
             total_count += len(group.items)
 
     normalized["total_count"] = total_count
