@@ -30,7 +30,8 @@ def async_setup_services(hass: HomeAssistant) -> None:
             break
 
         if result is None:
-            return {"results": []}
+            _LOGGER.warning("Search called with no configured MyDramaList entries")
+            return {"dramas": [], "people": []}
 
         return {
             "dramas": [
@@ -67,6 +68,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             break
 
         if result is None:
+            _LOGGER.warning("get_drama called with no configured MyDramaList entries")
             return {}
 
         data = result.data

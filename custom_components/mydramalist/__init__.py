@@ -8,7 +8,7 @@ from kuryana import AsyncKuryana
 
 from .const import DEFAULT_API_URL, DOMAIN, PLATFORMS
 from .coordinator import MyDramaListCoordinator
-from .services import async_setup_services, async_unload_services
+from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,8 +51,5 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         data = hass.data[DOMAIN].pop(entry.entry_id)
         await data["client"].client.aclose()
-
-    if not hass.data[DOMAIN]:
-        async_unload_services(hass)
 
     return unload_ok

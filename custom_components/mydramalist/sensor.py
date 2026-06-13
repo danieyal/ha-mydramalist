@@ -58,6 +58,7 @@ class MyDramaListCategorySensor(CoordinatorEntity[MyDramaListCoordinator], Senso
     def _handle_coordinator_update(self) -> None:
         data = self.coordinator.data
         if data is None:
+            _LOGGER.debug("%s coordinator data is None, marking unavailable", self._category)
             self._attr_available = False
             self.async_write_ha_state()
             return

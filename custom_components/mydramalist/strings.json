@@ -8,13 +8,22 @@
           "user_id": "User ID",
           "api_url": "API URL (optional)"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure MyDramaList",
+        "description": "Update your MyDramaList user ID or API endpoint.",
+        "data": {
+          "user_id": "User ID",
+          "api_url": "API URL (optional)"
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect to the API. Check your user ID and API URL."
     },
     "abort": {
-      "already_configured": "This MyDramaList user is already configured."
+      "already_configured": "This MyDramaList user is already configured.",
+      "reconfigure_successful": "Reconfiguration successful."
     }
   },
   "entity": {
