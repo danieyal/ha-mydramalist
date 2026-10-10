@@ -21,10 +21,10 @@ get_drama:
   name: Get Drama
   description: Get detailed information about a specific drama.
   fields:
-    slug:
-      name: Slug
-      description: The drama slug from MyDramaList.
+    title_id:
+      name: Title ID
+      description: The MyDramaList title id, or a slug that starts with it.
       required: true
-      example: "good-bad-mother"
+      example: "18452-goblin"
       selector:
         text:

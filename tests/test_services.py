@@ -5,51 +5,44 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
+
+from mdl.models.auth import UserProfileResponse
+from mdl.models.base import Images, SearchEntry
+from mdl.models.reviews import Cast, CreditsResponse
+from mdl.models.titles import MovieTitle, TitleResponse
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.mydramalist.const import DOMAIN
-from custom_components.mydramalist.services import async_setup_services, async_unload_services
 
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
-    pass
+from .conftest import setup_integration
 
 
 async def test_service_search(
-    hass: HomeAssistant, mock_kuryana_client: MagicMock
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
-    from kuryana.types.search import (
-        SearchDrama,
-        SearchPerson,
-        SearchResultQuery,
-        SearchResults,
+    mock_mdl_client.search.titles = AsyncMock(
+        return_value=[
+            MovieTitle(
+                id=18452,
+                title="Goblin",
+                year=2016,
+                type="Drama",
+                country="South Korea",
+                episodes=16,
+                rating=8.8,
+                images=Images(thumb="https://example.com/goblin.jpg"),
+            )
+        ]
     )
-    from datetime import datetime
-
-    mock_search_result = SearchResultQuery(
-        query="goblin",
-        results=SearchResults(
-            dramas=[
-                SearchDrama(
-                    slug="goblin",
-                    thumb="https://example.com/goblin.jpg",
-                    mdl_id="123",
-                    title="Goblin",
-                    ranking="1",
-                    type="Drama",
-                    year=2016,
-                    series=True,
-                )
-            ],
-            people=[],
-        ),
-        scrape_date=datetime(2025, 6, 13, 12, 0, 0),
+    mock_mdl_client.search.people = AsyncMock(
+        return_value=[
+            UserProfileResponse(
+                id=1, slug="1-gong-yoo", name="Gong Yoo", nationality="South Korean"
+            )
+        ]
     )
-    mock_kuryana_client.search = AsyncMock(return_value=mock_search_result)
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["test_entry"] = {"client": mock_kuryana_client}
-    async_setup_services(hass)
+    await setup_integration(hass, mock_config_entry)
 
     response = await hass.services.async_call(
         DOMAIN,
@@ -59,114 +52,103 @@ async def test_service_search(
         return_response=True,
     )
 
-    assert response is not None
-    assert len(response["dramas"]) == 1
-    assert response["dramas"][0]["title"] == "Goblin"
-    assert response["dramas"][0]["year"] == 2016
+    mock_mdl_client.search.titles.assert_awaited_once_with("goblin")
+    assert response["dramas"] == [
+        {
+            "id": 18452,
+            "title": "Goblin",
+            "original_title": None,
+            "year": 2016,
+            "type": "Drama",
+            "country": "South Korea",
+            "episodes": 16,
+            "rating": 8.8,
+            "rank": None,
+            "thumb": "https://example.com/goblin.jpg",
+        }
+    ]
+    assert response["people"][0]["name"] == "Gong Yoo"
+    assert response["people"][0]["slug"] == "1-gong-yoo"
 
 
 async def test_service_get_drama(
-    hass: HomeAssistant, mock_kuryana_client: MagicMock
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
-    from kuryana.types.drama import (
-        DramaCast,
-        DramaData,
-        DramaDetails,
-        DramaOthers,
-        DramaQuery,
-    )
-    from datetime import datetime
-
-    mock_drama_result = DramaQuery(
-        slug_query="goblin",
-        data=DramaData(
-            link="https://mydramalist.com/123-goblin",
+    mock_mdl_client.titles.get_title = AsyncMock(
+        return_value=TitleResponse(
+            id=18452,
             title="Goblin",
-            complete_title="Guardian: The Lonely and Great God",
-            sub_title="Goblin",
-            year="2016",
-            rating=9.1,
-            poster="https://example.com/poster.jpg",
+            original_title="쓸쓸하고 찬란하神-도깨비",
+            year=2016,
+            rating=8.8,
             synopsis="A synopsis...",
-            casts=[
-                DramaCast(
-                    name="Gong Yoo",
-                    profile_image="https://example.com/gongyoo.jpg",
-                    slug="gong-yoo",
-                    link="https://mydramalist.com/people/gong-yoo",
-                )
-            ],
-            details=DramaDetails(
-                country="South Korea",
-                type="Drama",
-                episodes="16",
-                aired="Dec 2, 2016 - Jan 21, 2017",
-                original_network="tvN",
-                duration="1 hr. 10 min.",
-                score="9.1",
-                ranked="#1",
-                popularity="#1",
-                content_rating="15+",
-                watchers="50000",
-                favorites="10000",
-            ),
-            others=DramaOthers(
-                related_content=[],
-                native_title=["쓸쓸하고 찬란하神-도깨비"],
-                also_known_as=["Guardian"],
-                genres=["Comedy", "Fantasy", "Romance"],
-                tags=["Goblin", "Grim Reaper"],
-            ),
-        ),
-        scrape_date=datetime(2025, 6, 13, 12, 0, 0),
+            permalink="https://mydramalist.com/18452-goblin",
+            country="South Korea",
+            episodes=16,
+            images=Images(poster="https://example.com/poster.jpg"),
+            genres=[SearchEntry(id=1, name="Fantasy"), SearchEntry(id=2, name="Romance")],
+        )
     )
-    mock_kuryana_client.get_drama = AsyncMock(return_value=mock_drama_result)
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["test_entry"] = {"client": mock_kuryana_client}
-    async_setup_services(hass)
+    mock_mdl_client.titles.get_credits = AsyncMock(
+        return_value=CreditsResponse(
+            cast=[Cast(id=1, name="Gong Yoo", character_name="Kim Shin", role="Main Role")]
+        )
+    )
+    await setup_integration(hass, mock_config_entry)
 
     response = await hass.services.async_call(
         DOMAIN,
         "get_drama",
-        {"slug": "goblin"},
+        {"title_id": "18452-goblin"},
         blocking=True,
         return_response=True,
     )
 
-    assert response is not None
+    mock_mdl_client.titles.get_title.assert_awaited_once_with(18452)
+    mock_mdl_client.titles.get_credits.assert_awaited_once_with(18452)
     assert response["title"] == "Goblin"
-    assert response["complete_title"] == "Guardian: The Lonely and Great God"
-    assert response["rating"] == 9.1
-    assert len(response["casts"]) == 1
-    assert response["casts"][0]["name"] == "Gong Yoo"
-    assert response["details"]["country"] == "South Korea"
+    assert response["original_title"] == "쓸쓸하고 찬란하神-도깨비"
+    assert response["rating"] == 8.8
+    assert response["poster"] == "https://example.com/poster.jpg"
+    assert response["link"] == "https://mydramalist.com/18452-goblin"
+    assert response["genres"] == ["Fantasy", "Romance"]
+    assert response["tags"] == []
+    assert response["casts"] == [
+        {
+            "id": 1,
+            "name": "Gong Yoo",
+            "character_name": "Kim Shin",
+            "role": "Main Role",
+            "thumb": None,
+        }
+    ]
+
+
+async def test_service_get_drama_invalid_id(
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    mock_mdl_client.titles.get_title = AsyncMock()
+    await setup_integration(hass, mock_config_entry)
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            "get_drama",
+            {"title_id": "goblin"},
+            blocking=True,
+            return_response=True,
+        )
+
+    mock_mdl_client.titles.get_title.assert_not_awaited()
 
 
 async def test_service_refresh(
-    hass: HomeAssistant, mock_kuryana_client: MagicMock, mock_user_query
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
-    from custom_components.mydramalist.coordinator import MyDramaListCoordinator
+    await setup_integration(hass, mock_config_entry)
+    mock_mdl_client.watchlist.fetch.reset_mock()
 
-    mock_kuryana_client.get_user = AsyncMock(return_value=mock_user_query)
+    await hass.services.async_call(DOMAIN, "refresh", {}, blocking=True)
+    await hass.async_block_till_done()
 
-    coordinator = MyDramaListCoordinator(hass, mock_kuryana_client, "testuser")
-    await coordinator.async_config_entry_first_refresh()
-
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["test_entry"] = {
-        "client": mock_kuryana_client,
-        "coordinator": coordinator,
-    }
-    async_setup_services(hass)
-
-    mock_kuryana_client.get_user.reset_mock()
-
-    await hass.services.async_call(
-        DOMAIN,
-        "refresh",
-        {},
-        blocking=True,
-    )
-
-    mock_kuryana_client.get_user.assert_called_once()
+    assert mock_mdl_client.watchlist.fetch.await_count == 5

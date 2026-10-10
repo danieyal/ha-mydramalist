@@ -1,9 +1,11 @@
 import logging
+import re
 from typing import Any
 
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.exceptions import ServiceValidationError
 
-from kuryana import AsyncKuryana
+from mdl import AsyncMDLClient
 
 from .const import DOMAIN
 
@@ -12,6 +14,15 @@ _LOGGER = logging.getLogger(__name__)
 SERVICE_REFRESH = "refresh"
 SERVICE_SEARCH = "search"
 SERVICE_GET_DRAMA = "get_drama"
+
+# Accepts a bare id ("18452") or a MyDramaList slug ("18452-goblin").
+_TITLE_ID_RE = re.compile(r"\d+")
+
+
+def _get_client(hass: HomeAssistant) -> AsyncMDLClient | None:
+    for entry_data in hass.data[DOMAIN].values():
+        return entry_data["client"]
+    return None
 
 
 def async_setup_services(hass: HomeAssistant) -> None:
@@ -23,100 +34,107 @@ def async_setup_services(hass: HomeAssistant) -> None:
     async def handle_search(call: ServiceCall) -> dict[str, Any]:
         query = call.data["query"]
 
-        result = None
-        for entry_data in hass.data[DOMAIN].values():
-            client: AsyncKuryana = entry_data["client"]
-            result = await client.search(query)
-            break
-
-        if result is None:
+        client = _get_client(hass)
+        if client is None:
             _LOGGER.warning("Search called with no configured MyDramaList entries")
             return {"dramas": [], "people": []}
+
+        titles = await client.search.titles(query)
+        people = await client.search.people(query)
 
         return {
             "dramas": [
                 {
-                    "slug": d.slug,
-                    "title": d.title,
-                    "year": d.year,
-                    "type": d.type,
-                    "mdl_id": d.mdl_id,
-                    "thumb": d.thumb,
-                    "ranking": d.ranking,
-                    "series": d.series,
+                    "id": t.id,
+                    "title": t.title,
+                    "original_title": t.original_title,
+                    "year": t.year,
+                    "type": t.type,
+                    "country": t.country,
+                    "episodes": t.episodes,
+                    "rating": t.rating,
+                    "rank": t.rank,
+                    "thumb": t.images.thumb if t.images else None,
                 }
-                for d in result.results.dramas
+                for t in titles
             ],
             "people": [
                 {
+                    "id": p.id,
                     "slug": p.slug,
                     "name": p.name,
                     "nationality": p.nationality,
-                    "thumb": p.thumb,
+                    "thumb": p.thumbnail,
                 }
-                for p in result.results.people
+                for p in people
             ],
         }
 
     async def handle_get_drama(call: ServiceCall) -> dict[str, Any]:
-        slug = call.data["slug"]
+        raw_id = str(call.data["title_id"]).strip()
+        if (match := _TITLE_ID_RE.match(raw_id)) is None:
+            raise ServiceValidationError(
+                f"'{raw_id}' is not a MyDramaList title id or slug"
+            )
+        title_id = int(match.group())
 
-        result = None
-        for entry_data in hass.data[DOMAIN].values():
-            client: AsyncKuryana = entry_data["client"]
-            result = await client.get_drama(slug)
-            break
-
-        if result is None:
+        client = _get_client(hass)
+        if client is None:
             _LOGGER.warning("get_drama called with no configured MyDramaList entries")
             return {}
 
-        data = result.data
+        title = await client.titles.get_title(title_id)
+        credits = await client.titles.get_credits(title_id)
+
         return {
-            "title": data.title,
-            "complete_title": data.complete_title,
-            "sub_title": data.sub_title,
-            "year": data.year,
-            "rating": data.rating,
-            "poster": data.poster,
-            "synopsis": data.synopsis,
-            "link": data.link,
+            "id": title.id,
+            "title": title.title,
+            "original_title": title.original_title,
+            "year": title.year,
+            "rating": title.rating,
+            "poster": title.images.poster if title.images else None,
+            "synopsis": title.synopsis,
+            "link": title.permalink,
+            "type": title.type,
+            "country": title.country,
+            "episodes": title.episodes,
+            "runtime": title.runtime,
+            "aired_start": title.aired_start,
+            "aired_end": title.aired_end,
+            "status": title.status,
+            "certification": title.certification,
+            "ranked": title.ranked,
+            "popularity": title.popularity,
+            "watchers": title.watchers,
+            "votes": title.votes,
+            "genres": [g.name for g in title.genres or []],
+            "tags": [t.name for t in title.tags or []],
+            "alt_titles": [a.name for a in title.alt_titles or []],
             "casts": [
                 {
+                    "id": c.id,
                     "name": c.name,
-                    "slug": c.slug,
-                    "profile_image": c.profile_image,
-                    "link": c.link,
+                    "character_name": c.character_name,
+                    "role": c.role,
+                    "thumb": c.images.thumb if c.images else None,
                 }
-                for c in data.casts
+                for c in credits.cast or []
             ],
-            "details": {
-                "country": data.details.country,
-                "type": data.details.type,
-                "episodes": data.details.episodes,
-                "aired": data.details.aired,
-                "original_network": data.details.original_network,
-                "duration": data.details.duration,
-                "score": data.details.score,
-                "ranked": data.details.ranked,
-                "popularity": data.details.popularity,
-                "content_rating": data.details.content_rating,
-                "watchers": data.details.watchers,
-                "favorites": data.details.favorites,
-            },
-            "others": {
-                "related_content": data.others.related_content,
-                "native_title": data.others.native_title,
-                "also_known_as": data.others.also_known_as,
-                "genres": data.others.genres,
-                "tags": data.others.tags,
-            },
-            "scrape_date": result.scrape_date.isoformat(),
         }
 
     hass.services.async_register(DOMAIN, SERVICE_REFRESH, handle_refresh)
-    hass.services.async_register(DOMAIN, SERVICE_SEARCH, handle_search)
-    hass.services.async_register(DOMAIN, SERVICE_GET_DRAMA, handle_get_drama)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SEARCH,
+        handle_search,
+        supports_response=SupportsResponse.ONLY,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_DRAMA,
+        handle_get_drama,
+        supports_response=SupportsResponse.ONLY,
+    )
 
 
 def async_unload_services(hass: HomeAssistant) -> None:

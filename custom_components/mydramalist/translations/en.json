@@ -3,27 +3,37 @@
     "step": {
       "user": {
         "title": "MyDramaList",
-        "description": "Enter your MyDramaList user ID and optional API endpoint.",
+        "description": "Sign in with your MyDramaList account. Your lists are read from the MyDramaList app API, which only serves the signed-in user's lists.",
         "data": {
-          "user_id": "User ID",
-          "api_url": "API URL (optional)"
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-authenticate MyDramaList",
+        "description": "Enter the MyDramaList password for {username}.",
+        "data": {
+          "password": "Password"
         }
       },
       "reconfigure": {
         "title": "Reconfigure MyDramaList",
-        "description": "Update your MyDramaList user ID or API endpoint.",
+        "description": "Update your MyDramaList credentials.",
         "data": {
-          "user_id": "User ID",
-          "api_url": "API URL (optional)"
+          "username": "Username",
+          "password": "Password"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the API. Check your user ID and API URL."
+      "cannot_connect": "Failed to connect to MyDramaList.",
+      "invalid_auth": "Invalid username or password."
     },
     "abort": {
       "already_configured": "This MyDramaList user is already configured.",
-      "reconfigure_successful": "Reconfiguration successful."
+      "reauth_successful": "Re-authentication successful.",
+      "reconfigure_successful": "Reconfiguration successful.",
+      "unique_id_mismatch": "The username must match the configured MyDramaList user."
     }
   },
   "entity": {

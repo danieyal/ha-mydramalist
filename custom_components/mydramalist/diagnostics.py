@@ -1,9 +1,13 @@
 from typing import Any
 
+from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN
+
+TO_REDACT = {CONF_PASSWORD}
 
 
 async def async_get_config_entry_diagnostics(
@@ -16,10 +20,7 @@ async def async_get_config_entry_diagnostics(
         "config_entry": {
             "entry_id": entry.entry_id,
             "version": entry.version,
-            "data": {
-                "user_id": entry.data.get("user_id"),
-                "api_url": entry.data.get("api_url"),
-            },
+            "data": async_redact_data(dict(entry.data), TO_REDACT),
         },
         "coordinator_data": coordinator.data,
         "last_update_success": coordinator.last_update_success,

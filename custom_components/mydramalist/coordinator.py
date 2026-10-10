@@ -1,11 +1,14 @@
 import logging
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from kuryana import AsyncKuryana
-from kuryana.types.user import UserDataList, UserDataListGroup, UserDataListItem, UserQuery
+from mdl import AsyncMDLClient, MDLAuthError
+from mdl.models.titles import Movie, MovieStatusType
 
 from .const import (
     CATEGORY_COMPLETED,
@@ -19,93 +22,90 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-_MODEL_KEY_MAP = {
-    "Completed": CATEGORY_COMPLETED,
-    "Plan_to_Watch": CATEGORY_PLAN_TO_WATCH,
-    "Plan to Watch": CATEGORY_PLAN_TO_WATCH,
-    "On_hold": CATEGORY_ON_HOLD,
-    "On-hold": CATEGORY_ON_HOLD,
-    "On Hold": CATEGORY_ON_HOLD,
-    "Dropped": CATEGORY_DROPPED,
-    "Watching": CATEGORY_WATCHING,
-    "Currently Watching": CATEGORY_WATCHING,
-    "Currently-Watching": CATEGORY_WATCHING,
+CATEGORY_STATUSES = {
+    CATEGORY_WATCHING: MovieStatusType.WATCHING,
+    CATEGORY_COMPLETED: MovieStatusType.COMPLETED,
+    CATEGORY_PLAN_TO_WATCH: MovieStatusType.PLAN_TO_WATCH,
+    CATEGORY_ON_HOLD: MovieStatusType.ON_HOLD,
+    CATEGORY_DROPPED: MovieStatusType.DROPPED,
 }
 
 
-def _normalize_item(item: UserDataListItem) -> dict[str, Any]:
+def _normalize_item(movie: Movie) -> dict[str, Any]:
+    title = movie.title
     return {
-        "name": item.name,
-        "id": item.id,
-        "score": item.score,
-        "episode_seen": item.episode_seen,
-        "episode_total": item.episode_total,
+        "name": title.title if title else None,
+        "id": title.id if title else None,
+        "score": movie.rating,
+        "episode_seen": movie.episode_seen,
+        "episode_total": title.episodes if title else None,
     }
 
 
-def _normalize_group(group: UserDataListGroup) -> dict[str, Any]:
-    items = [_normalize_item(item) for item in group.items]
-    stats = dict(group.stats)
+def _normalize_group(movies: list[Movie]) -> dict[str, Any]:
+    # The sync endpoint flags removed entries rather than omitting them.
+    movies = [movie for movie in movies if not movie.deleted]
     return {
-        "items": items,
-        "count": len(items),
-        "stats": stats,
+        "items": [_normalize_item(movie) for movie in movies],
+        "count": len(movies),
+        "stats": {
+            "episodes_seen": sum(movie.episode_seen or 0 for movie in movies),
+        },
     }
 
 
-def _normalize_data(user_query: UserQuery) -> dict[str, Any]:
-    raw_list = user_query.data.list
+def _normalize_data(lists: dict[str, list[Movie]]) -> dict[str, Any]:
     normalized: dict[str, Any] = {
-        CATEGORY_WATCHING: {"items": [], "count": 0, "stats": {}},
-        CATEGORY_COMPLETED: {"items": [], "count": 0, "stats": {}},
-        CATEGORY_PLAN_TO_WATCH: {"items": [], "count": 0, "stats": {}},
-        CATEGORY_ON_HOLD: {"items": [], "count": 0, "stats": {}},
-        CATEGORY_DROPPED: {"items": [], "count": 0, "stats": {}},
+        category: _normalize_group(movies) for category, movies in lists.items()
     }
-    total_count = 0
-
-    if isinstance(raw_list, UserDataList):
-        entries: dict[str, UserDataListGroup] = {
-            CATEGORY_COMPLETED: raw_list.Completed,
-            CATEGORY_PLAN_TO_WATCH: raw_list.Plan_to_Watch,
-            CATEGORY_ON_HOLD: raw_list.On_hold,
-            CATEGORY_DROPPED: raw_list.Dropped,
-        }
-        if (watching := getattr(raw_list, "Watching", None)) is not None:
-            entries[CATEGORY_WATCHING] = watching
-        for category, group in entries.items():
-            normalized[category] = _normalize_group(group)
-            total_count += len(group.items)
-    else:
-        for key, group in raw_list.items():
-            category = _MODEL_KEY_MAP.get(key, key.lower().replace(" ", "_"))
-            normalized[category] = _normalize_group(group)
-            total_count += len(group.items)
-
-    normalized["total_count"] = total_count
-    normalized["scrape_date"] = user_query.scrape_date.isoformat()
-
+    normalized["total_count"] = sum(group["count"] for group in normalized.values())
     return normalized
 
 
 class MyDramaListCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    def __init__(self, hass: HomeAssistant, client: AsyncKuryana, user_id: str) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry: ConfigEntry, client: AsyncMDLClient
+    ) -> None:
+        self.username: str = entry.data[CONF_USERNAME]
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN}_{user_id}",
+            config_entry=entry,
+            name=f"{DOMAIN}_{self.username}",
             update_interval=DEFAULT_UPDATE_INTERVAL,
             always_update=True,
         )
         self.client = client
-        self.user_id = user_id
+        self._password: str = entry.data[CONF_PASSWORD]
+
+    async def _async_login(self) -> None:
+        await self.client.auth.login(self.username, self._password)
+
+    async def _async_fetch_lists(self) -> dict[str, list[Movie]]:
+        # Fetched sequentially: a concurrent 401 would make pymdl clear the token
+        # that a re-login just stored.
+        return {
+            category: await self.client.watchlist.fetch(status)
+            for category, status in CATEGORY_STATUSES.items()
+        }
 
     async def _async_update_data(self) -> dict[str, Any]:
         try:
-            user_query: UserQuery = await self.client.get_user(self.user_id)
+            if self.client.tokens.get_token() is None:
+                await self._async_login()
+            try:
+                lists = await self._async_fetch_lists()
+            except MDLAuthError:
+                # Access tokens expire and pymdl does not refresh them; log in again once.
+                await self._async_login()
+                lists = await self._async_fetch_lists()
+        except MDLAuthError as err:
+            raise ConfigEntryAuthFailed(
+                f"Authentication failed for '{self.username}': {err}"
+            ) from err
         except Exception as err:
             raise UpdateFailed(
-                f"Error fetching dramalist for '{self.user_id}': {err}"
+                f"Error fetching dramalist for '{self.username}': {err}"
             ) from err
 
-        return _normalize_data(user_query)
+        return _normalize_data(lists)

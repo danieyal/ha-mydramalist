@@ -2,10 +2,11 @@ from datetime import timedelta
 
 DOMAIN = "mydramalist"
 NAME = "MyDramaList"
-DEFAULT_API_URL = "https://kuryana.tbdh.app"
 
+CONF_DEVICE_ID = "device_id"
+
+# Version 1 entries were configured against the Kuryana scraper.
 CONF_USER_ID = "user_id"
-CONF_API_URL = "api_url"
 
 DEFAULT_UPDATE_INTERVAL = timedelta(hours=1)
 

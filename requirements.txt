@@ -1,5 +1,5 @@
 homeassistant
 pytest
-pytest-homeassistant
+pytest-homeassistant-custom-component
 pytest-asyncio
-kuryana>=0.2.0
+mydramalist-client==0.1.0

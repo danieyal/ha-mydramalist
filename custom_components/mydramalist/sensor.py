@@ -4,6 +4,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_USERNAME
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
@@ -46,7 +47,7 @@ class MyDramaListCategorySensor(CoordinatorEntity[MyDramaListCoordinator], Senso
         self._attr_translation_key = category
         self._attr_unique_id = f"{entry.entry_id}_{category}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.data.get("user_id", entry.entry_id))},
+            identifiers={(DOMAIN, entry.data.get(CONF_USERNAME, entry.entry_id))},
             name=NAME,
             entry_type=DeviceEntryType.SERVICE,
         )
@@ -88,7 +89,7 @@ class MyDramaListTotalSensor(CoordinatorEntity[MyDramaListCoordinator], SensorEn
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_total"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.data.get("user_id", entry.entry_id))},
+            identifiers={(DOMAIN, entry.data.get(CONF_USERNAME, entry.entry_id))},
             name=NAME,
             entry_type=DeviceEntryType.SERVICE,
         )

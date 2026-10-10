@@ -1,13 +1,13 @@
 # ha-mydramalist
 
-Home Assistant custom integration for [MyDramaList](https://mydramalist.com) powered by the [Kuryana](https://github.com/tbdsux/kuryana) scraper API.
+Home Assistant custom integration for [MyDramaList](https://mydramalist.com) powered by [mydramalist-client](https://pypi.org/project/mydramalist-client/) ([pymdl](https://github.com/danieyal/pymdl)), an unofficial client for the MyDramaList app API.
 
-Tracks your drama watching progress — completed, plan-to-watch, on-hold, dropped — as sensors in Home Assistant. Also provides services to search for dramas and fetch detailed info.
+Tracks your drama watching progress — watching, completed, plan-to-watch, on-hold, dropped — as sensors in Home Assistant. Also provides services to search for dramas and fetch detailed info.
 
 ## Features
 
 - **Dramalist tracking** — sensors for each list category (Completed, Plan to Watch, On Hold, Dropped, Watching) with counts and full item details as attributes
-- **Configurable API endpoint** — use the public Kuryana API or point to your own self-hosted instance
+- **Account sign-in** — reads your lists straight from the MyDramaList app API, with re-authentication when your password changes
 - **Services** — `mydramalist.search` to find dramas, `mydramalist.get_drama` for detailed info, `mydramalist.refresh` to force-poll
 - **Diagnostics** — built-in HA diagnostics support for troubleshooting
 - **Config flow** — set up entirely through the UI, no YAML needed
@@ -33,14 +33,16 @@ Then restart Home Assistant.
 
 1. Go to **Settings > Devices & Services > Add Integration**
 2. Search for **MyDramaList**
-3. Enter your MyDramaList user ID (the slug in your profile URL) and optionally a custom Kuryana API endpoint
+3. Enter your MyDramaList username and password
 4. Click Submit
+
+The app API only serves the signed-in user's lists, so the integration tracks the account you sign in with. Your password is stored in the Home Assistant config entry and is redacted from diagnostics.
 
 After setup, you'll see a **MyDramaList** device with sensors:
 
 | Sensor | State | Attributes |
 |--------|-------|------------|
-| `sensor.mydramalist_completed` | Count of completed dramas | List of dramas with name, score, progress |
+| `sensor.mydramalist_completed` | Count of completed dramas | `items` (name, id, score, episode_seen, episode_total) and `stats` (episodes_seen) |
 | `sensor.mydramalist_plan_to_watch` | Count of plan-to-watch | Same as above |
 | `sensor.mydramalist_on_hold` | Count of on-hold | Same as above |
 | `sensor.mydramalist_dropped` | Count of dropped | Same as above |
@@ -67,15 +69,15 @@ Returns matching dramas and people.
 
 ### `mydramalist.get_drama`
 
-Get detailed info for a specific drama by its slug.
+Get detailed info for a specific drama by its MyDramaList title id, or a slug that starts with it (the part of the URL after `mydramalist.com/`).
 
 ```yaml
 service: mydramalist.get_drama
 data:
-  slug: "goblin"
+  title_id: "18452-goblin"
 ```
 
-Returns title, rating, synopsis, cast, episodes, genres, and more.
+Returns title, rating, synopsis, cast, episodes, genres, tags, and more.
 
 ## Template examples
 
@@ -87,29 +89,27 @@ List your completed dramas in a markdown card:
 {% endfor %}
 ```
 
-Get your total days spent watching:
+Get the number of completed episodes:
 
 ```jinja2
-{{ state_attr('sensor.mydramalist_total_dramas', 'completed').stats.Days }} days
+{{ state_attr('sensor.mydramalist_total_dramas', 'completed').stats.episodes_seen }} episodes
 ```
 
 ## Requirements
 
-- Home Assistant 2023.8 or later
-- Python 3.12+ (required by kuryana)
-- Internet access to reach the Kuryana API
+- Home Assistant 2026.6 or later (mydramalist-client needs pydantic 2.13.4+)
+- A MyDramaList account
+- Internet access to reach `app-api.mydramalist.com`
 
-## Self-hosting Kuryana
+## Upgrading from 0.1.x
 
-If you prefer to run your own Kuryana instance:
+Version 0.2.0 replaces the Kuryana scraper with the MyDramaList app API:
 
-```sh
-git clone https://github.com/tbdsux/kuryana
-cd kuryana
-docker compose up -d --build
-```
-
-Then enter `http://<your-host>:<port>` as the API URL during setup.
+- Existing entries are migrated automatically. Your profile slug becomes the username, and Home Assistant asks for your password through a re-authentication notice. If your login username differs from your profile slug, remove the entry and add it again.
+- The custom API URL option is gone.
+- `score`, `episode_seen` and `episode_total` are now numbers, and `id` is the numeric MyDramaList title id.
+- Kuryana's `stats` (Dramas, TV Shows, Episodes, Movies, Days) are replaced by `stats.episodes_seen`.
+- `mydramalist.get_drama` takes `title_id` instead of `slug`, and both services return the app API's fields.
 
 ## License
 
