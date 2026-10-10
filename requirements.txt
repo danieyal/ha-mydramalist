@@ -2,4 +2,4 @@ homeassistant
 pytest
 pytest-homeassistant-custom-component
 pytest-asyncio
-mydramalist-client==0.1.0
+mydramalist-client==0.2.0
