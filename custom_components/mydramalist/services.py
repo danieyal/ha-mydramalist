@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import ServiceValidationError
 
 from mdl import AsyncMDLClient
+from mdl.models.auth import UserProfileResponse
 
 from .const import DOMAIN
 
@@ -17,6 +18,13 @@ SERVICE_GET_DRAMA = "get_drama"
 
 # Accepts a bare id ("18452") or a MyDramaList slug ("18452-goblin").
 _TITLE_ID_RE = re.compile(r"\d+")
+
+
+def _person_slug(person: UserProfileResponse) -> str | None:
+    # People search sends a site path ("/people/440-gong-yoo") instead of a slug.
+    if person.slug:
+        return person.slug
+    return person.url.rstrip("/").rsplit("/", 1)[-1] if person.url else None
 
 
 def _get_client(hass: HomeAssistant) -> AsyncMDLClient | None:
@@ -61,7 +69,7 @@ def async_setup_services(hass: HomeAssistant) -> None:
             "people": [
                 {
                     "id": p.id,
-                    "slug": p.slug,
+                    "slug": _person_slug(p),
                     "name": p.name,
                     "nationality": p.nationality,
                     "thumb": p.thumbnail,

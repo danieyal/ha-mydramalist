@@ -35,6 +35,8 @@ async def async_setup_entry(
 class MyDramaListCategorySensor(CoordinatorEntity[MyDramaListCoordinator], SensorEntity):
     _attr_has_entity_name = True
     _attr_native_unit_of_measurement = "dramas"
+    # Item lists outgrow the recorder's 16 KB attribute limit; keep them out of history.
+    _unrecorded_attributes = frozenset({"items"})
 
     def __init__(
         self,
@@ -80,6 +82,8 @@ class MyDramaListCategorySensor(CoordinatorEntity[MyDramaListCoordinator], Senso
 class MyDramaListTotalSensor(CoordinatorEntity[MyDramaListCoordinator], SensorEntity):
     _attr_has_entity_name = True
     _attr_translation_key = "total"
+    # Each category attribute holds that list's items; keep them out of history.
+    _unrecorded_attributes = frozenset(CATEGORIES)
 
     def __init__(
         self,

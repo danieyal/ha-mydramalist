@@ -16,8 +16,12 @@ from custom_components.mydramalist.const import CONF_DEVICE_ID, DOMAIN
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
-    pass
+def auto_enable_custom_integrations(request: pytest.FixtureRequest) -> None:
+    # The recorder has to be set up before hass, and this autouse fixture would
+    # otherwise create hass first.
+    if "recorder_mock" in request.fixturenames:
+        request.getfixturevalue("recorder_mock")
+    request.getfixturevalue("enable_custom_integrations")
 
 
 def _movie(title_id: int, name: str, rating: float, seen: int, total: int) -> Movie:

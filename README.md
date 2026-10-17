@@ -49,6 +49,8 @@ After setup, you'll see a **MyDramaList** device with sensors:
 | `sensor.mydramalist_watching` | Count of currently watching | Same as above |
 | `sensor.mydramalist_total_dramas` | Total dramas across all lists | All categories with items and stats |
 
+The item lists are available to templates and dashboards but are kept out of the recorder's history, since they exceed its 16 KB attribute limit.
+
 ## Services
 
 ### `mydramalist.refresh`

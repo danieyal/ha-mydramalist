@@ -39,7 +39,9 @@ async def test_service_search(
         return_value=[
             UserProfileResponse(
                 id=1, slug="1-gong-yoo", name="Gong Yoo", nationality="South Korean"
-            )
+            ),
+            # Live people search sends only a site path, no slug.
+            UserProfileResponse(id=440, name="Gong Yoo", url="/people/440-gong-yoo"),
         ]
     )
     await setup_integration(hass, mock_config_entry)
@@ -69,6 +71,7 @@ async def test_service_search(
     ]
     assert response["people"][0]["name"] == "Gong Yoo"
     assert response["people"][0]["slug"] == "1-gong-yoo"
+    assert response["people"][1]["slug"] == "440-gong-yoo"
 
 
 async def test_service_get_drama(
