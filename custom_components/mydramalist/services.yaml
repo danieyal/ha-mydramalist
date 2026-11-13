@@ -1,30 +1,122 @@
-refresh:
-  name: Refresh
-  description: Force-refresh MyDramaList data from the API.
-  target:
-    entity:
+.config_entry: &config_entry
+  selector:
+    config_entry:
       integration: mydramalist
 
-search:
-  name: Search
-  description: Search for dramas or people on MyDramaList.
+.title_id: &title_id
+  required: true
+  example: "18452-goblin"
+  selector:
+    text:
+
+refresh:
   fields:
+    config_entry_id: *config_entry
+
+search:
+  fields:
+    config_entry_id: *config_entry
     query:
-      name: Query
-      description: Search query string.
       required: true
       example: "goblin"
       selector:
         text:
 
 get_drama:
-  name: Get Drama
-  description: Get detailed information about a specific drama.
   fields:
-    title_id:
-      name: Title ID
-      description: The MyDramaList title id, or a slug that starts with it.
+    config_entry_id: *config_entry
+    title_id: *title_id
+
+get_recommendations:
+  fields:
+    config_entry_id: *config_entry
+    title_id: *title_id
+
+get_titles:
+  fields:
+    config_entry_id: *config_entry
+    feed:
       required: true
-      example: "18452-goblin"
+      default: trending
+      selector:
+        select:
+          translation_key: feed
+          options:
+            - trending
+            - top_airing
+            - upcoming
+            - currently_watching
+            - top_movies
+
+get_airing_schedule:
+  fields:
+    config_entry_id: *config_entry
+    only_tracked:
+      default: true
+      selector:
+        boolean:
+
+update_entry:
+  fields:
+    config_entry_id: *config_entry
+    title_id: *title_id
+    status:
+      selector:
+        select:
+          translation_key: status
+          options:
+            - watching
+            - completed
+            - plan_to_watch
+            - on_hold
+            - dropped
+    episode_seen:
+      selector:
+        number:
+          min: 0
+          max: 2000
+          mode: box
+    score:
+      selector:
+        number:
+          min: 0
+          max: 10
+          step: 0.5
+          mode: slider
+    date_start:
+      selector:
+        date:
+    date_finish:
+      selector:
+        date:
+    times_rewatched:
+      selector:
+        number:
+          min: 0
+          max: 100
+          mode: box
+    note:
       selector:
         text:
+          multiline: true
+
+mark_episode_watched:
+  fields:
+    config_entry_id: *config_entry
+    title_id: *title_id
+    episodes:
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+    complete_when_finished:
+      default: true
+      selector:
+        boolean:
+
+remove_entry:
+  fields:
+    config_entry_id: *config_entry
+    title_id: *title_id

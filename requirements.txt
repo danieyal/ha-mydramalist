@@ -1,5 +1,3 @@
-homeassistant
-pytest
-pytest-homeassistant-custom-component
-pytest-asyncio
-mydramalist-client==0.3.0
+# Test dependencies. pytest-homeassistant-custom-component pins Home Assistant and pytest.
+pytest-homeassistant-custom-component==0.13.375
+mydramalist-client==0.4.0

@@ -1,12 +1,20 @@
 {
   "domain": "mydramalist",
   "name": "MyDramaList",
-  "codeowners": ["@danieyal"],
+  "after_dependencies": [
+    "frontend",
+    "http"
+  ],
+  "codeowners": [
+    "@danieyal"
+  ],
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/danieyal/ha-mydramalist",
-  "issue_tracker": "https://github.com/danieyal/ha-mydramalist/issues",
   "iot_class": "cloud_polling",
-  "requirements": ["mydramalist-client==0.3.0"],
-  "version": "0.2.1"
+  "issue_tracker": "https://github.com/danieyal/ha-mydramalist/issues",
+  "requirements": [
+    "mydramalist-client==0.4.0"
+  ],
+  "version": "0.3.0"
 }

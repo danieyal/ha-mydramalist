@@ -1,0 +1,104 @@
+# A MyDramaList dashboard. Create a dashboard (Settings > Dashboards > Add dashboard >
+# New dashboard from scratch), open it, choose Edit > Raw configuration editor, and paste
+# this in. The custom cards ship with the integration; no extra install is needed.
+#
+# Entity ids assume the default device name "MyDramaList". If you renamed the device or
+# have several accounts, adjust them.
+title: MyDramaList
+views:
+  - title: Dramas
+    path: dramas
+    icon: mdi:television-classic
+    type: sections
+    max_columns: 3
+    sections:
+      - type: grid
+        cards:
+          - type: custom:mydramalist-stats-card
+            entity: sensor.mydramalist_total_dramas
+            grid_options:
+              columns: full
+          - type: custom:mydramalist-upcoming-card
+            entity: calendar.mydramalist_episodes
+            max_items: 8
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: custom:mydramalist-list-card
+            entity: sensor.mydramalist_watching
+            sort: recent
+            max_items: 12
+            show_watched_button: true
+            grid_options:
+              columns: full
+
+      - type: grid
+        cards:
+          - type: custom:mydramalist-list-card
+            entity: sensor.mydramalist_plan_to_watch
+            title: Up next
+            layout: grid
+            sort: recent
+            max_items: 9
+            grid_options:
+              columns: full
+          - type: custom:mydramalist-list-card
+            entity: sensor.mydramalist_completed
+            title: Top rated
+            layout: grid
+            sort: score
+            max_items: 9
+            grid_options:
+              columns: full
+
+  - title: Schedule
+    path: schedule
+    icon: mdi:calendar-star
+    cards:
+      - type: calendar
+        initial_view: listWeek
+        entities:
+          - calendar.mydramalist_episodes
+
+  - title: Stats
+    path: stats
+    icon: mdi:chart-line
+    type: sections
+    sections:
+      - type: grid
+        cards:
+          - type: statistics-graph
+            title: Episodes watched
+            entities:
+              - sensor.mydramalist_episodes_watched
+            stat_types:
+              - change
+            chart_type: bar
+            period: week
+            days_to_show: 90
+            grid_options:
+              columns: full
+          - type: statistics-graph
+            title: List sizes
+            entities:
+              - sensor.mydramalist_watching
+              - sensor.mydramalist_plan_to_watch
+              - sensor.mydramalist_completed
+            stat_types:
+              - mean
+            period: day
+            days_to_show: 90
+            grid_options:
+              columns: full
+      - type: grid
+        cards:
+          - type: tile
+            entity: sensor.mydramalist_time_watched
+          - type: tile
+            entity: sensor.mydramalist_mean_score
+          - type: tile
+            entity: sensor.mydramalist_next_episode
+          - type: tile
+            entity: sensor.mydramalist_unread_notifications

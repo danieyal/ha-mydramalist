@@ -6,7 +6,8 @@ from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 
-from mdl import MDLAuthError, MDLServerError
+from mdl import MDLAuthError, MDLNetworkError, MDLServerError
+from mdl.models.titles import LastActivity
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.mydramalist.const import (
@@ -22,7 +23,7 @@ from custom_components.mydramalist.diagnostics import (
     async_get_config_entry_diagnostics,
 )
 
-from .conftest import setup_integration
+from .conftest import FOOL_IN_LOVE, setup_integration
 
 
 def _auth_error() -> MDLAuthError:
@@ -45,31 +46,89 @@ async def test_coordinator_normalizes_data(
     assert mock_config_entry.state is ConfigEntryState.LOADED
     mock_mdl_client.auth.login.assert_awaited_once_with("testuser", "secret")
 
-    data = hass.data[DOMAIN][mock_config_entry.entry_id]["coordinator"].data
-    assert data["total_count"] == 4
+    data = mock_config_entry.runtime_data.coordinator.data
+    assert data.total_count == 5
+    assert data.user.display_name == "Test User"
 
-    assert data[CATEGORY_WATCHING] == {
-        "items": [],
-        "count": 0,
-        "stats": {"episodes_seen": 0},
-    }
-    assert data[CATEGORY_COMPLETED]["count"] == 2
-    assert data[CATEGORY_COMPLETED]["items"][0] == {
-        "name": "Goblin",
-        "id": 18452,
-        "score": 10,
-        "episode_seen": 16,
+    assert data.lists[CATEGORY_WATCHING][0] == {
+        "id": FOOL_IN_LOVE,
+        "name": "Fool in Love",
+        "url": f"https://mydramalist.com/{FOOL_IN_LOVE}",
+        "thumb": f"https://i.mydramalist.com/{FOOL_IN_LOVE}t.jpg",
+        "year": 2016,
+        "type": "Drama",
+        "country": "South Korea",
+        "score": 0,
+        "episode_seen": 3,
         "episode_total": 16,
+        "progress": 19,
+        "date_start": "2026-11-01",
+        "date_finish": None,
+        "updated_at": "2026-11-01T10:00:00Z",
     }
-    assert data[CATEGORY_COMPLETED]["stats"] == {"episodes_seen": 32}
-    assert data[CATEGORY_PLAN_TO_WATCH]["items"][0]["name"] == "Vincenzo"
-    assert data[CATEGORY_ON_HOLD]["count"] == 0
+    completed = data.lists[CATEGORY_COMPLETED]
+    assert [item["name"] for item in completed] == ["Goblin", "Descendants of the Sun"]
+    assert completed[0]["date_finish"] == "2026-09-22"
+    # "0000-00-00" is the API's placeholder for no date.
+    assert completed[1]["date_finish"] is None
+    assert data.lists[CATEGORY_PLAN_TO_WATCH][0]["name"] == "Vincenzo"
+    assert data.lists[CATEGORY_ON_HOLD] == []
     # The deleted sync entry is dropped.
-    assert data[CATEGORY_DROPPED]["count"] == 1
-    assert data[CATEGORY_DROPPED]["items"][0]["name"] == "The Heirs"
+    assert [item["name"] for item in data.lists[CATEGORY_DROPPED]] == ["The Heirs"]
+
+    assert data.stats["episodes_watched"] == 4914
+    assert data.stats["minutes_watched"] == 251974
+    assert data.stats["mean_score"] == 7.75
+    assert data.unread == {"notifications": 3, "friend_requests": 1, "messages": 0}
 
 
-async def test_coordinator_relogs_in_when_token_expires(
+async def test_unchanged_last_activity_skips_list_fetch(
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    await setup_integration(hass, mock_config_entry)
+    coordinator = mock_config_entry.runtime_data.coordinator
+    assert mock_mdl_client.watchlist.fetch.await_count == 5
+    mock_mdl_client.watchlist.fetch.reset_mock()
+
+    await coordinator.async_refresh()
+    assert mock_mdl_client.watchlist.fetch.await_count == 0
+    assert coordinator.data.total_count == 5
+
+    mock_mdl_client.watchlist.get_last_activities.return_value = LastActivity(
+        all="2026-11-13T12:00:00Z"
+    )
+    await coordinator.async_refresh()
+    assert mock_mdl_client.watchlist.fetch.await_count == 5
+    # The profile is only read once.
+    mock_mdl_client.account.get_profile.assert_awaited_once()
+
+
+async def test_missing_last_activity_always_fetches(
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    mock_mdl_client.watchlist.get_last_activities.return_value = LastActivity()
+    await setup_integration(hass, mock_config_entry)
+    mock_mdl_client.watchlist.fetch.reset_mock()
+
+    await mock_config_entry.runtime_data.coordinator.async_refresh()
+    assert mock_mdl_client.watchlist.fetch.await_count == 5
+
+
+async def test_stats_failure_keeps_lists_working(
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    mock_mdl_client.users.get_user_stats.side_effect = MDLNetworkError(
+        "Forbidden", status_code=403
+    )
+    await setup_integration(hass, mock_config_entry)
+
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    data = mock_config_entry.runtime_data.coordinator.data
+    assert data.stats is None
+    assert data.total_count == 5
+
+
+async def test_coordinator_relogs_in_when_refresh_fails(
     hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
     fetch = mock_mdl_client.watchlist.fetch
@@ -117,6 +176,17 @@ async def test_coordinator_update_failure(
     mock_mdl_client.aclose.assert_awaited_once()
 
 
+async def test_calendar_failure_does_not_block_setup(
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    mock_mdl_client.calendar.episodes.side_effect = MDLServerError("down", status_code=503)
+
+    await setup_integration(hass, mock_config_entry)
+
+    assert mock_config_entry.state is ConfigEntryState.LOADED
+    assert mock_config_entry.runtime_data.calendar.data is None
+
+
 async def test_migrate_kuryana_entry_requests_password(
     hass: HomeAssistant, mock_mdl_client: MagicMock
 ) -> None:
@@ -149,7 +219,7 @@ async def test_unload_closes_client(
     mock_mdl_client.aclose.assert_awaited_once()
 
 
-async def test_diagnostics_redacts_password(
+async def test_diagnostics_redacts_credentials(
     hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
 ) -> None:
     await setup_integration(hass, mock_config_entry)
@@ -158,4 +228,6 @@ async def test_diagnostics_redacts_password(
 
     assert diagnostics["config_entry"]["data"][CONF_USERNAME] == "testuser"
     assert diagnostics["config_entry"]["data"][CONF_PASSWORD] == "**REDACTED**"
-    assert diagnostics["coordinator_data"]["total_count"] == 4
+    assert "someone@example.com" not in str(diagnostics)
+    assert len(diagnostics["coordinator_data"]["lists"][CATEGORY_COMPLETED]) == 2
+    assert diagnostics["calendar"]["airings"] == 5

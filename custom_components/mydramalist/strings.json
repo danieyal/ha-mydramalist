@@ -36,7 +36,56 @@
       "unique_id_mismatch": "The username must match the configured MyDramaList user."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "MyDramaList options",
+        "data": {
+          "update_interval": "Update interval",
+          "calendar_categories": "Lists on the episode calendar"
+        },
+        "data_description": {
+          "update_interval": "How often to check your lists, in minutes. A check that finds no changes costs only a few small requests.",
+          "calendar_categories": "Upcoming episodes of titles on these lists appear on the episode calendar and the next episode sensor."
+        }
+      }
+    }
+  },
+  "selector": {
+    "calendar_categories": {
+      "options": {
+        "watching": "Watching",
+        "completed": "Completed",
+        "plan_to_watch": "Plan to Watch",
+        "on_hold": "On Hold",
+        "dropped": "Dropped"
+      }
+    },
+    "status": {
+      "options": {
+        "watching": "Watching",
+        "completed": "Completed",
+        "plan_to_watch": "Plan to Watch",
+        "on_hold": "On Hold",
+        "dropped": "Dropped"
+      }
+    },
+    "feed": {
+      "options": {
+        "trending": "Trending",
+        "top_airing": "Top airing",
+        "upcoming": "Upcoming",
+        "currently_watching": "Popular right now",
+        "top_movies": "Top movies"
+      }
+    }
+  },
   "entity": {
+    "calendar": {
+      "episodes": {
+        "name": "Episodes"
+      }
+    },
     "sensor": {
       "watching": {
         "name": "Watching"
@@ -55,7 +104,229 @@
       },
       "total": {
         "name": "Total dramas"
+      },
+      "episodes_watched": {
+        "name": "Episodes watched"
+      },
+      "movies_watched": {
+        "name": "Movies watched"
+      },
+      "time_watched": {
+        "name": "Time watched"
+      },
+      "mean_score": {
+        "name": "Mean score"
+      },
+      "unread_notifications": {
+        "name": "Unread notifications"
+      },
+      "next_episode": {
+        "name": "Next episode"
       }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh",
+      "description": "Fetches your lists and the airing schedule from MyDramaList now.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        }
+      }
+    },
+    "search": {
+      "name": "Search",
+      "description": "Searches MyDramaList for titles and people.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "query": {
+          "name": "Query",
+          "description": "What to search for."
+        }
+      }
+    },
+    "get_drama": {
+      "name": "Get drama",
+      "description": "Gets a title's details, cast and your list entry for it.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "title_id": {
+          "name": "Title",
+          "description": "A MyDramaList title id, a slug that starts with it (18452-goblin), or the title's mydramalist.com link."
+        }
+      }
+    },
+    "get_recommendations": {
+      "name": "Get recommendations",
+      "description": "Gets titles that MyDramaList users recommend to fans of a title.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "title_id": {
+          "name": "Title",
+          "description": "A MyDramaList title id, a slug that starts with it (18452-goblin), or the title's mydramalist.com link."
+        }
+      }
+    },
+    "get_titles": {
+      "name": "Get titles",
+      "description": "Gets one of MyDramaList's title feeds, such as what is trending or airing.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "feed": {
+          "name": "Feed",
+          "description": "Which feed to get."
+        }
+      }
+    },
+    "get_airing_schedule": {
+      "name": "Get airing schedule",
+      "description": "Gets the episodes airing this week, from yesterday on.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "only_tracked": {
+          "name": "Only my lists",
+          "description": "Only include titles on the lists chosen for the episode calendar."
+        }
+      }
+    },
+    "update_entry": {
+      "name": "Update list entry",
+      "description": "Adds a title to your lists or changes its entry. Fields you leave out keep their current values.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "title_id": {
+          "name": "Title",
+          "description": "A MyDramaList title id, a slug that starts with it (18452-goblin), or the title's mydramalist.com link."
+        },
+        "status": {
+          "name": "List",
+          "description": "Which list the title is on. Required when adding a title. Moving a title to Completed marks every episode seen."
+        },
+        "episode_seen": {
+          "name": "Episodes seen",
+          "description": "How many episodes you have seen."
+        },
+        "score": {
+          "name": "Score",
+          "description": "Your score from 0 (no score) to 10. Titles that have not aired yet cannot be scored."
+        },
+        "date_start": {
+          "name": "Start date",
+          "description": "When you started watching."
+        },
+        "date_finish": {
+          "name": "Finish date",
+          "description": "When you finished watching."
+        },
+        "times_rewatched": {
+          "name": "Times rewatched",
+          "description": "How many times you have rewatched the title."
+        },
+        "note": {
+          "name": "Note",
+          "description": "A private note. MyDramaList does not let a note be cleared, only replaced."
+        }
+      }
+    },
+    "mark_episode_watched": {
+      "name": "Mark episode watched",
+      "description": "Adds to the episodes you have seen of a title and moves it to Watching. A title on none of your lists is added.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "title_id": {
+          "name": "Title",
+          "description": "A MyDramaList title id, a slug that starts with it (18452-goblin), or the title's mydramalist.com link."
+        },
+        "episodes": {
+          "name": "Episodes",
+          "description": "How many episodes to mark as seen."
+        },
+        "complete_when_finished": {
+          "name": "Complete when finished",
+          "description": "Move the title to Completed after its last episode."
+        }
+      }
+    },
+    "remove_entry": {
+      "name": "Remove from lists",
+      "description": "Removes a title from your lists.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Account",
+          "description": "The MyDramaList account to use. Defaults to the first one set up."
+        },
+        "title_id": {
+          "name": "Title",
+          "description": "A MyDramaList title id, a slug that starts with it (18452-goblin), or the title's mydramalist.com link."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "password_required": {
+      "message": "A MyDramaList password is required."
+    },
+    "auth_failed": {
+      "message": "Authentication failed for {username}: {error}"
+    },
+    "update_failed": {
+      "message": "Error fetching the lists of {username}: {error}"
+    },
+    "calendar_failed": {
+      "message": "Error fetching the airing schedule: {error}"
+    },
+    "invalid_title_id": {
+      "message": "{title_id} is not a MyDramaList title id, slug or link."
+    },
+    "entry_not_found": {
+      "message": "No MyDramaList account with config entry id {entry_id}."
+    },
+    "not_loaded": {
+      "message": "No MyDramaList account is set up and loaded."
+    },
+    "title_not_found": {
+      "message": "MyDramaList has no title with that id."
+    },
+    "sync_rejected": {
+      "message": "MyDramaList rejected the change: {reason}"
+    },
+    "auth_error": {
+      "message": "MyDramaList rejected the sign-in. Re-authenticate the integration."
+    },
+    "api_error": {
+      "message": "MyDramaList request failed: {error}"
+    },
+    "invalid_request": {
+      "message": "Invalid request: {error}"
+    },
+    "already_completed": {
+      "message": "This title is already completed."
+    },
+    "not_on_list": {
+      "message": "This title is not on any of your lists."
     }
   }
 }

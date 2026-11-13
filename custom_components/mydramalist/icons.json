@@ -1,0 +1,76 @@
+{
+  "entity": {
+    "calendar": {
+      "episodes": {
+        "default": "mdi:calendar-star"
+      }
+    },
+    "sensor": {
+      "watching": {
+        "default": "mdi:play-circle-outline"
+      },
+      "completed": {
+        "default": "mdi:check-circle-outline"
+      },
+      "plan_to_watch": {
+        "default": "mdi:bookmark-outline"
+      },
+      "on_hold": {
+        "default": "mdi:pause-circle-outline"
+      },
+      "dropped": {
+        "default": "mdi:close-circle-outline"
+      },
+      "total": {
+        "default": "mdi:television-classic"
+      },
+      "episodes_watched": {
+        "default": "mdi:filmstrip"
+      },
+      "movies_watched": {
+        "default": "mdi:movie-open-outline"
+      },
+      "time_watched": {
+        "default": "mdi:timer-sand"
+      },
+      "mean_score": {
+        "default": "mdi:star-outline"
+      },
+      "unread_notifications": {
+        "default": "mdi:bell-outline"
+      },
+      "next_episode": {
+        "default": "mdi:calendar-clock"
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "service": "mdi:refresh"
+    },
+    "search": {
+      "service": "mdi:magnify"
+    },
+    "get_drama": {
+      "service": "mdi:information-outline"
+    },
+    "get_recommendations": {
+      "service": "mdi:thumb-up-outline"
+    },
+    "get_titles": {
+      "service": "mdi:fire"
+    },
+    "get_airing_schedule": {
+      "service": "mdi:calendar-clock"
+    },
+    "update_entry": {
+      "service": "mdi:playlist-edit"
+    },
+    "mark_episode_watched": {
+      "service": "mdi:playlist-check"
+    },
+    "remove_entry": {
+      "service": "mdi:playlist-remove"
+    }
+  }
+}

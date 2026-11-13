@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 from homeassistant import config_entries, data_entry_flow
@@ -9,7 +10,12 @@ from homeassistant.core import HomeAssistant
 from mdl import MDLAuthError, MDLServerError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.mydramalist.const import CONF_DEVICE_ID, DOMAIN
+from custom_components.mydramalist.const import (
+    CONF_CALENDAR_CATEGORIES,
+    CONF_DEVICE_ID,
+    CONF_UPDATE_INTERVAL,
+    DOMAIN,
+)
 
 from .conftest import setup_integration
 
@@ -171,3 +177,28 @@ async def test_reconfigure_flow_other_user(
 
     assert result["type"] == data_entry_flow.FlowResultType.ABORT
     assert result["reason"] == "unique_id_mismatch"
+
+
+async def test_options_flow(
+    hass: HomeAssistant, mock_mdl_client: MagicMock, mock_config_entry: MockConfigEntry
+) -> None:
+    await setup_integration(hass, mock_config_entry)
+
+    result = await hass.config_entries.options.async_init(mock_config_entry.entry_id)
+    assert result["type"] == data_entry_flow.FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_UPDATE_INTERVAL: 30.0, CONF_CALENDAR_CATEGORIES: ["watching"]},
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] == data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert mock_config_entry.options == {
+        CONF_UPDATE_INTERVAL: 30,
+        CONF_CALENDAR_CATEGORIES: ["watching"],
+    }
+    # The entry reloads with the new interval.
+    coordinator = mock_config_entry.runtime_data.coordinator
+    assert coordinator.update_interval == timedelta(minutes=30)
