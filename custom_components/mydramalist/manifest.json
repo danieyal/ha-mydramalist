@@ -5,6 +5,10 @@
     "frontend",
     "http"
   ],
+  "categories": [
+    "media_entertainment.tv_streaming",
+    "productivity_information.calendars_todos"
+  ],
   "codeowners": [
     "@danieyal"
   ],

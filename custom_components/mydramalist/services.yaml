@@ -1,17 +1,9 @@
-.config_entry: &config_entry
-  selector:
-    config_entry:
-      integration: mydramalist
-
-.title_id: &title_id
-  required: true
-  example: "18452-goblin"
-  selector:
-    text:
-
 refresh:
   fields:
-    config_entry_id: *config_entry
+    config_entry_id: &config_entry
+      selector:
+        config_entry:
+          integration: mydramalist
 
 search:
   fields:
@@ -25,7 +17,11 @@ search:
 get_drama:
   fields:
     config_entry_id: *config_entry
-    title_id: *title_id
+    title_id: &title_id
+      required: true
+      example: "18452-goblin"
+      selector:
+        text:
 
 get_recommendations:
   fields:
