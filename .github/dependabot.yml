@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # requirements.txt pins the test stack (pytest-homeassistant-custom-component pins
+  # Home Assistant). The integration's own requirement lives in manifest.json, which
+  # Dependabot does not read; bump it by hand with each mydramalist-client release.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: "master"
+    cooldown:
+      default-days: 7
+      semver-major-days: 7
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    target-branch: "master"
+    cooldown:
+      default-days: 7
