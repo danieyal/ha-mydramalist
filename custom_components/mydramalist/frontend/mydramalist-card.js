@@ -8,7 +8,7 @@
  */
 
 const DOMAIN = "mydramalist";
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 const CATEGORIES = ["watching", "completed", "plan_to_watch", "on_hold", "dropped"];
 const CATEGORY_LABELS = {
   watching: "Watching",

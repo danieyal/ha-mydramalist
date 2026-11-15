@@ -4,7 +4,7 @@ from mdl.models.titles import MovieStatusType
 
 DOMAIN = "mydramalist"
 NAME = "MyDramaList"
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 WEBSITE_URL = "https://mydramalist.com"
 
